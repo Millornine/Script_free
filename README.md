@@ -16,7 +16,7 @@
 
 <br>
 
-[<h1 align="center">
+<h1 align="center">
   [![Bankz4-image]][Bankz4-url]<br>
 </h1>
 
