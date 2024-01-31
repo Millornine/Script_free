@@ -130,7 +130,6 @@
 		.@refinecnt = .@safe - .@refinerycnt;
 		break;
 	case 2:
-		next;
 		.@reinput = 10 - .@refinerycnt;
 		mes "["+ .@npc_name$ +"]";
 		mes "กรอกได้ตั้งแต่ 1 ถึง " + .@reinput;
