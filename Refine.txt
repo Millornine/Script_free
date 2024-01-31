@@ -1,0 +1,215 @@
+//===== Developers Script ===================================
+//= Refine with npc don't use ui
+//===== Current Version =====================================
+//= 1.1 Fixed
+//===== Description =========================================
+//= For Free by Millornine
+//===== Auther ==============================================
+//= Millornine
+//===== Additional Comments =================================
+//= 1.0 เริ่มต้น script Base on Rathena script
+//= 1.1 เพิ่มระบบการตีบวกแล้วหยุดระหว่างตีบวกแต่ละขั้นได้
+//===========================================================
+-	script	Refine#stack	-1,{
+	disable_items;
+	.@npc_name$ = "^000080 Upgrader ^000000";
+
+	setarray .@indices[1], EQI_HEAD_TOP, EQI_ARMOR, EQI_HAND_L, EQI_HAND_R, EQI_GARMENT, EQI_SHOES, EQI_ACC_L, EQI_ACC_R, EQI_HEAD_MID, EQI_HEAD_LOW;
+	for(.@i = 1; .@i<getarraysize(.@indices); ++.@i) {
+		if(getequipisequiped(.@indices[.@i])) {
+			.@menu$ = .@menu$ + "^000080" + F_getpositionname(.@indices[.@i]) + "-[" + getequipname(.@indices[.@i]) + "] ^000000";
+			.@equipped = 1;
+		}
+		.@menu$ = .@menu$ + ":";
+	}
+	if (.@equipped == 0) {
+		mes "["+ .@npc_name$ +"]";
+		mes "ไม่พบไอเท็มใดที่ส่วมใส่อยุ่และสามารถตีบวกได้...";
+		close;
+	}
+	.@part = .@indices[select(.@menu$)];
+
+	if(!getequipisequiped(.@part)) { //custom check
+		mes "["+ .@npc_name$ +"]";
+		mes "คุณไม่ได้สวมใส่";
+		mes "อะไรเลยในส่วนนั้นๆ";
+		mes " ข้าไม่สามารถตีบวกได้";
+		emotion ET_FRET;
+		close;
+	}
+	//Check if the item is refinable...
+	if(!getequipisenableref(.@part)) {
+		mes "["+ .@npc_name$ +"]";
+		mes "ฉันว่าของที่เลือกมามันตีบวกไม่ได้";
+		close;
+	}
+	//Check to see if the items is already +10
+	if(getequiprefinerycnt(.@part) >= 10) {
+		mes "["+ .@npc_name$ +"]";
+		mes "ผู้เล่น ไอเท็มชิ้นนี้ตันแล้วผู้เล่นจะบวกอะไรอีก";
+		close;
+	}
+	.@refineitemid = getequipid(.@part); // save id of the item
+	.@refinerycnt = getequiprefinerycnt(.@part); //save refinery count
+	setarray .@card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
+	.@price = getequiprefinecost(.@part, REFINE_COST_NORMAL, REFINE_ZENY_COST);
+	.@material = getequiprefinecost(.@part, REFINE_COST_NORMAL, REFINE_MATERIAL_ID);
+	.@itemtype = getiteminfo( .@refineitemid, ITEMINFO_TYPE );
+
+	if( .@itemtype == IT_ARMOR ){
+		.@equip_lv = getequiparmorlv( .@part );
+
+		switch( .@equip_lv ){
+			case 1:
+				.@safe = 4;
+				break;
+			default:
+				// TODO:
+				close;
+		}
+
+		// If the VIP system is enabled, the prices for non-VIP players are considerably higher.
+		if( VIP_SCRIPT && !vip_status(VIP_STATUS_ACTIVE) ){
+			switch( .@equip_lv ){
+				case 1:
+					.@price = .@price * 10;
+					break;
+				default:
+					// TODO:
+					close;
+			}
+		}
+	}else if( .@itemtype == IT_WEAPON ){
+		.@equip_lv = getequipweaponlv( .@part );
+
+		switch( .@equip_lv ){
+			case 1:
+				.@safe = 7;
+				break;
+			case 2:
+				.@safe = 6;
+				break;
+			case 3:
+				.@safe = 5;
+				break;
+			case 4:
+				.@safe = 4;
+				break;
+			default:
+				// TODO:
+				close;
+		}
+
+		// If the VIP system is enabled, the prices for non-VIP players are considerably higher.
+		if( VIP_SCRIPT && !vip_status(VIP_STATUS_ACTIVE) ){
+			switch( .@equip_lv ){
+				case 1:
+					.@price = .@price * 40;
+					break;
+				case 2:
+					.@price = .@price * 50;
+					break;
+				case 3:
+					.@price = .@price * 2;
+					break;
+				case 4:
+					.@price = .@price * 2;
+					break;
+				default:
+					// TODO:
+					close;
+			}
+		}
+	}else{
+		.@safe = 4;
+	}
+	// New Refining Functions ========================
+	.@menu2 = 2;
+	switch(.@menu2){
+	case 1: 
+		.@refinecnt = .@safe - .@refinerycnt;
+		break;
+	case 2:
+		next;
+		.@reinput = 10 - .@refinerycnt;
+		mes "["+ .@npc_name$ +"]";
+		mes "กรอกได้ตั้งแต่ 1 ถึง " + .@reinput;
+		input .@refinecnt;
+		if(.@refinecnt < 1) { .@refinecnt = 1; }
+		.@refinecheck = .@refinecnt + .@refinerycnt;
+		if (.@refinecnt < 1 || .@refinecheck > 10) {
+			mes "["+ .@npc_name$ +"]";
+			mes "I can't refine this item that many times.";
+			close;
+		}
+		break;
+	}
+	.@fullprice = .@price * .@refinecnt;
+	mes "["+ .@npc_name$ +"]";
+	mes "ฉันต้องการ " + .@refinecnt + " " + getitemname(.@material) + " และ " + .@fullprice + " Zeny. ผู้เล่นโอเคไหม?";
+	next;
+	if(select("โอเค","ไม่โอเค...") == 2){
+		mes "["+ .@npc_name$ +"]";
+		mes "ขอให้ผู้เล่นโชคดี";
+		close;
+	}
+	if(countitem(.@material) < .@refinecnt || Zeny < .@fullprice) {
+		mes "["+ .@npc_name$ +"]";
+		mes "Is that all you got? Unfortunately I can't work for you at a lower price. Try putting yourself in my shoes.";
+		close;
+	}
+	Zeny = Zeny - .@fullprice;
+	delitem .@material,.@refinecnt;
+	while(.@refinecnt){
+		mes "["+ .@npc_name$ +"]";
+		mes "อัตราตีบวกสำเร็จ :"+getequippercentrefinery(.@part)+" %";
+		mes "ขอให้ผู้เล่นโชคดีกับการตีบวก";
+		next;
+		switch(select("ตีบวกต่อ","ยกเลิก"))
+		{
+			case 1:
+				if (getequipisequiped(.@part) == 0) {
+					mes "["+ .@npc_name$ +"]";
+					mes " ดูนี่สิ... คุณไม่มีไอเทมเลย...";
+					close;
+				}
+				// anti-hack
+				if (callfunc("F_IsEquipIDHack", .@part, .@refineitemid) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) ||
+						callfunc("F_IsEquipRefineHack", .@part, .@refinerycnt) || (.@menu2 == 1 && getequippercentrefinery(.@part) < 100)) {
+					mes "["+ .@npc_name$ +"]";
+					mes "แต่นายคิดว่าฉันจะโง่ขนาดนี้เลยเหรอ?!";
+					mes "คุณเปลี่ยนมันแล้ว...";
+					mes "ออกไปก่อนที่ฉันจะตะลึงด้วยค้อนของฉัน!!";
+					close;
+				} 
+
+				if(.@menu2 == 2 && getequippercentrefinery(.@part) <= rand(100)) {
+					failedrefitem .@part;
+					emotion ET_HUK;
+					mes "["+ .@npc_name$ +"]";
+					mes "ไอแม่ย้อย!!! ตีบวกแตกแล้วจะแหกปากเพื่อ...";
+					.@refinecnt = .@refinecnt - 1;
+					if(.@refinecnt == 0) close;
+					mes "ข้าไม่สามารถบวกต่อได้ฉันจะคืนเงินที่เหลือให้...";
+					getitem .@material,.@refinecnt;
+					.@fullprice = .@refinecnt * .@price;
+					Zeny = Zeny + .@fullprice;
+					close;
+				}
+				successrefitem .@part;
+				emotion ET_BEST;
+				.@refinecnt = .@refinecnt - 1;
+				.@refinerycnt = getequiprefinerycnt(.@part);
+				break;
+			case 2:
+				mes "["+ .@npc_name$ +"]";
+				mes "ขอให้โชคดีกับการได้บวกนั้นๆไปละกัน";
+				.@refinecnt = 0;
+				break;
+		}
+	}
+	close;
+}
+
+
+morocc,134,78,4	duplicate(Refine#stack)	ช่างตีบวก#obt01	536
